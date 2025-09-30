@@ -11,6 +11,8 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const ROOT = path.join(process.cwd());
 const WEB_DIR = path.join(ROOT, 'web');
 const CLAIMS_PATH = 'data/db/claims.json';
+const PERSONS_PATH = 'data/db/persons.json';
+const POLICIES_PATH = 'data/db/policies.json';
 
 const send = (res, code, body, headers = {}) => {
   const data = typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body);

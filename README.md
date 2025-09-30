@@ -59,12 +59,12 @@ workflows/      # Example automation workflow definitions
 For multi-service setups or background workers, create a `docker-compose.yml` that runs both the API (`node src/server.js`) and the watcher (`npm run process:watch`). Bind mount `data/` if you need persistence outside the container.
 
 ## Deploying to AWS (ECS on Fargate)
-1. Authenticate with Amazon ECR and create a repository named `claims-ai-agent`:
+1. Authenticate with Amazon ECR and create a repository named `claims-ai-agent` (replace the sample account ID `123456789012` with your own):
    ```bash
    aws ecr create-repository --repository-name claims-ai-agent
    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 123456789012.dkr.ecr.us-east-1.amazonaws.com
    ```
-2. Tag and push the Docker image:
+2. Tag and push the Docker image (use your Amazon ECR registry hostname instead of `123456789012.dkr.ecr.us-east-1.amazonaws.com`):
    ```bash
    docker tag claims-ai-agent:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/claims-ai-agent:latest
    docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/claims-ai-agent:latest
@@ -99,12 +99,12 @@ For multi-service setups or background workers, create a `docker-compose.yml` th
    ```bash
    gcloud artifacts repositories create claims-ai-agent --repository-format=docker --location=us-central1
    ```
-3. Tag and push the image:
+3. Tag and push the image (replace `my-gcp-project` with your Google Cloud project ID):
    ```bash
    docker tag claims-ai-agent:latest us-central1-docker.pkg.dev/my-gcp-project/claims-ai-agent/claims-ai-agent:latest
    docker push us-central1-docker.pkg.dev/my-gcp-project/claims-ai-agent/claims-ai-agent:latest
    ```
-4. Deploy to Cloud Run:
+4. Deploy to Cloud Run (remember to substitute your project ID for `my-gcp-project`):
    ```bash
    gcloud run deploy claims-ai-agent \
      --image us-central1-docker.pkg.dev/my-gcp-project/claims-ai-agent/claims-ai-agent:latest \

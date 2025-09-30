@@ -28,7 +28,11 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-seri
 .accent-rejected .metric-value { color: #d9480f; }
 .accent-claimed .metric-value { color: #5f3dc4; }
 .accent-paid .metric-value { color: #0ca678; }
-.dashboard-distribution, .dashboard-comparison, .dashboard-trend { margin-top: 16px; }
+.accent-fraud-score .metric-value { color: #ae3ec9; }
+.accent-fraud-cases .metric-value { color: #15aabf; }
+.accent-risk-high .metric-value { color: #d9480f; }
+.accent-activity-count .metric-value { color: #1c7ed6; }
+.dashboard-fraud-overview, .dashboard-fraud-activities, .dashboard-distribution, .dashboard-comparison, .dashboard-trend { margin-top: 16px; }
 .section-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .chart-wrapper { position: relative; min-height: 280px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

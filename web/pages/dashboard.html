@@ -14,15 +14,8 @@
     </section>
   </main>
   <script>
-    const fmt = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n);
-    fetch('./data/claims-sample.json').then(r => r.json()).then((rows) => {
-      const totals = rows.reduce((acc, c) => {
-        acc.count++;
-        acc.amount += c.amount;
-        acc[c.status] = (acc[c.status] || 0) + 1;
-        acc.payout = (acc.payout || 0) + (c.decision?.payout || 0);
-        return acc;
-      }, { count: 0, amount: 0, payout: 0 });
+    const fmt = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n || 0);
+    fetch('/api/stats').then(r => r.json()).then((totals) => {
       const el = document.getElementById('stats');
       el.innerHTML = `
         <p><strong>Total Claims:</strong> ${totals.count}</p>

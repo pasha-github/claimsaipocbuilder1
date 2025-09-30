@@ -36,7 +36,7 @@
             <label class="input-label" for="state">State</label>
             <input class="input-field" id="state" />
           </div>
-          <div class="input-group" style="grid-column: 1 / span 2;">
+          <div class="input-group grid-span-2">
             <label class="input-label" for="description">Description</label>
             <textarea class="input-field" id="description" rows="4"></textarea>
           </div>
@@ -46,7 +46,8 @@
           </div>
         </div>
         <div class="actions">
-          <button type="button" class="button-primary" id="download-json">Download Claim JSON</button>
+          <button type="button" class="button-primary" id="submit-api">Submit to API</button>
+          <button type="button" class="button-secondary" id="download-json">Download Claim JSON</button>
           <button type="reset" class="button-secondary">Reset</button>
         </div>
       </form>
@@ -54,25 +55,22 @@
   </main>
   <script>
     const el = (id) => document.getElementById(id);
+    const buildClaim = () => ({
+      id: `CLM-${Date.now()}`,
+      claimantId: el('claimantId').value.trim(),
+      policyId: el('policyId').value.trim(),
+      incident: {
+        date: el('incidentDate').value,
+        type: el('incidentType').value.trim(),
+        description: el('description').value.trim(),
+        location: { city: el('city').value.trim(), state: el('state').value.trim(), country: 'US' }
+      },
+      amount: parseFloat(el('amount').value),
+      attachments: []
+    });
+
     document.getElementById('download-json').addEventListener('click', () => {
-      const claim = {
-        id: `CLM-${Date.now()}`,
-        claimantId: el('claimantId').value.trim(),
-        policyId: el('policyId').value.trim(),
-        incident: {
-          date: el('incidentDate').value,
-          type: el('incidentType').value.trim(),
-          description: el('description').value.trim(),
-          location: { city: el('city').value.trim(), state: el('state').value.trim(), country: 'US' }
-        },
-        amount: parseFloat(el('amount').value),
-        attachments: [],
-        channel: 'portal',
-        status: 'submitted',
-        flags: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      const claim = buildClaim();
       const blob = new Blob([JSON.stringify(claim, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -80,6 +78,14 @@
       a.click();
       URL.revokeObjectURL(a.href);
       alert('Claim JSON downloaded. Drop it into data/inbox to simulate submission.');
+    });
+
+    document.getElementById('submit-api').addEventListener('click', async () => {
+      const claim = buildClaim();
+      const res = await fetch('/api/claims', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(claim) });
+      if (!res.ok) { alert('Submission failed'); return; }
+      const data = await res.json();
+      alert(`Submitted. Status: ${data.status}. Reason: ${data.decision?.reason || ''}`);
     });
   </script>
 </body>

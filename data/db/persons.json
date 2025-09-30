@@ -1,0 +1,34 @@
+[
+  {
+    "id": "P-001",
+    "name": { "first": "Alex", "last": "Johnson" },
+    "email": "alex.johnson@example.com",
+    "phone": "+1-512-555-0147",
+    "ssn": "123-45-6789",
+    "address": { "line1": "123 Oak St", "city": "Austin", "state": "TX", "zip": "73301", "country": "US" }
+  },
+  {
+    "id": "P-002",
+    "name": { "first": "Priya", "last": "Sharma" },
+    "email": "priya.sharma@example.com",
+    "phone": "+1-206-555-0199",
+    "ssn": "987-65-4321",
+    "address": { "line1": "500 Pine Ave", "city": "Seattle", "state": "WA", "zip": "98101", "country": "US" }
+  },
+  {
+    "id": "P-003",
+    "name": { "first": "Luis", "last": "Martinez" },
+    "email": "luis.martinez@example.com",
+    "phone": "+1-305-555-0112",
+    "ssn": "111-22-3333",
+    "address": { "line1": "88 Ocean Dr", "city": "Miami", "state": "FL", "zip": "33101", "country": "US" }
+  },
+  {
+    "id": "P-004",
+    "name": { "first": "Sara", "last": "Kim" },
+    "email": "sara.kim@example.com",
+    "phone": "+1-973-555-0170",
+    "ssn": "222-33-4444",
+    "address": { "line1": "44 Park Pl", "city": "Newark", "state": "NJ", "zip": "07101", "country": "US" }
+  }
+]

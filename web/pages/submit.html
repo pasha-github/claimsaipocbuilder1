@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Submit Claim</title>
+  <link rel="stylesheet" href="../styles/site.css" />
+</head>
+<body>
+  <header class="header-bar"><div class="brand">URCovered</div><nav class="nav-links"><a class="active" href="/web/pages/submit.html">New Claim</a><a href="/web/pages/claims.html">Claims</a><a href="/web/pages/queue.html">Queue</a><a href="/web/pages/dashboard.html">Dashboard</a><a href="/web/pages/admin.html">Admin</a></nav></header>
+  <main class="main-content">
+    <section class="card">
+      <form id="claim-form">
+        <div class="form-grid">
+          <div class="input-group">
+            <label class="input-label" for="claimantId">Claimant ID</label>
+            <input class="input-field" id="claimantId" required />
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="policyId">Policy ID</label>
+            <input class="input-field" id="policyId" required />
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="incidentDate">Incident Date</label>
+            <input class="input-field" id="incidentDate" type="date" required />
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="product">Product</label>
+            <select class="input-field" id="product">
+              <option value="Auto">Auto</option>
+              <option value="Home">Home</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="incidentType">Incident Type</label>
+            <select class="input-field" id="incidentType" required></select>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="city">City</label>
+            <input class="input-field" id="city" />
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="state">State</label>
+            <input class="input-field" id="state" />
+          </div>
+          <div class="input-group grid-span-2">
+            <label class="input-label" for="description">Description</label>
+            <textarea class="input-field" id="description" rows="4"></textarea>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="amount">Amount (USD)</label>
+            <input class="input-field" id="amount" type="number" step="0.01" min="0.01" required />
+          </div>
+        </div>
+        <div class="input-group grid-span-2">
+          <label class="input-label">Attachments</label>
+          <input class="input-field" id="files" type="file" multiple />
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="connector">Destination</label>
+          <select class="input-field" id="connector">
+            <option value="">None</option>
+            <option value="box">Box</option>
+            <option value="onedrive">OneDrive</option>
+          </select>
+        </div>
+        <div class="actions">
+          <button type="button" class="button-primary" id="upload">Upload Files</button>
+          <button type="button" class="button-primary" id="submit-api">Submit to API</button>
+          <button type="button" class="button-secondary" id="download-json">Download Claim JSON</button>
+          <button type="reset" class="button-secondary">Reset</button>
+        </div>
+      </form>
+    </section>
+  </main>
+  <script>
+    const el = (id) => document.getElementById(id);
+    let uploaded = [];
+
+    const INCIDENT_TYPES = {
+      Auto: ['AutoCollision','AutoTheft','AutoInjury','WindshieldDamage','Vandalism'],
+      Home: ['HomeTheft','HomeFire','HomeWaterDamage','NaturalDisaster','Liability']
+    };
+
+    const setIncidentOptions = (product) => {
+      const sel = el('incidentType');
+      sel.innerHTML = '';
+      (INCIDENT_TYPES[product] || []).forEach((t) => {
+        const opt = document.createElement('option');
+        opt.value = t; opt.textContent = t; sel.appendChild(opt);
+      });
+    };
+
+    el('product').addEventListener('change', () => setIncidentOptions(el('product').value));
+    setIncidentOptions(el('product').value || 'Auto');
+
+    const lookupPolicy = async () => {
+      const id = el('policyId').value.trim();
+      if (!id) return;
+      const res = await fetch(`/api/policies/${encodeURIComponent(id)}`);
+      if (!res.ok) return;
+      const { policy, person } = await res.json();
+      if (policy?.product) {
+        el('product').value = policy.product;
+        setIncidentOptions(policy.product);
+      }
+      if (person?.address) {
+        if (person.address.city) el('city').value = person.address.city;
+        if (person.address.state) el('state').value = person.address.state;
+      }
+      if (person?.id) {
+        el('claimantId').value = person.id;
+      }
+    };
+    el('policyId').addEventListener('blur', lookupPolicy);
+
+    const buildClaim = () => ({
+      id: `CLM-${Date.now()}`,
+      claimantId: el('claimantId').value.trim(),
+      policyId: el('policyId').value.trim(),
+      incident: {
+        date: el('incidentDate').value,
+        type: el('incidentType').value.trim(),
+        description: el('description').value.trim(),
+        location: { city: el('city').value.trim(), state: el('state').value.trim(), country: 'US' }
+      },
+      amount: parseFloat(el('amount').value),
+      attachments: []
+    });
+
+    document.getElementById('download-json').addEventListener('click', () => {
+      const claim = buildClaim();
+      const blob = new Blob([JSON.stringify(claim, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${claim.id}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      alert('Claim JSON downloaded. Drop it into data/inbox to simulate submission.');
+    });
+
+    document.getElementById('upload').addEventListener('click', async () => {
+      const connector = el('connector').value;
+      if (!connector) { alert('Select a destination'); return; }
+      const files = el('files').files;
+      if (!files || files.length === 0) { alert('Choose files'); return; }
+      const form = new FormData();
+      for (const f of files) form.append('files', f, f.name);
+      const res = await fetch(`/api/connectors/${connector}/upload`, { method: 'POST', body: form });
+      if (!res.ok) { alert('Upload failed — ensure connector credentials are saved in Admin'); return; }
+      uploaded = await res.json();
+      alert(`Uploaded ${uploaded.length} file(s).`);
+    });
+
+    document.getElementById('submit-api').addEventListener('click', async () => {
+      const claim = buildClaim();
+      claim.attachments = uploaded;
+      const res = await fetch('/api/claims', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(claim) });
+      if (!res.ok) { alert('Submission failed'); return; }
+      const data = await res.json();
+      alert(`Submitted. Status: ${data.status}. Reason: ${data.decision?.reason || ''}`);
+    });
+  </script>
+</body>
+</html>

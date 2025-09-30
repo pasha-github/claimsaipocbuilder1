@@ -1,0 +1,29 @@
+[
+  {
+    "id": "CLM-1001",
+    "claimantId": "P-001",
+    "policyId": "POL-001",
+    "amount": 850,
+    "status": "settled",
+    "decision": { "payout": 350, "reason": "Auto-approved: low risk, low amount" },
+    "updatedAt": "2025-09-01T10:00:00Z"
+  },
+  {
+    "id": "CLM-1002",
+    "claimantId": "P-002",
+    "policyId": "POL-002",
+    "amount": 4200,
+    "status": "processing",
+    "decision": { "payout": 3200, "reason": "Queued for adjuster review" },
+    "updatedAt": "2025-09-02T10:00:00Z"
+  },
+  {
+    "id": "CLM-1003",
+    "claimantId": "P-003",
+    "policyId": "POL-003",
+    "amount": 9800,
+    "status": "rejected",
+    "decision": { "payout": 0, "reason": "Validation errors" },
+    "updatedAt": "2025-09-03T10:00:00Z"
+  }
+]

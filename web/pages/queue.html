@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>URCovered — Claims Queue</title>
+  <link rel="stylesheet" href="../styles/site.css" />
+</head>
+<body>
+  <header class="header-bar"><div class="brand">URCovered</div><nav class="nav-links"><a href="/web/pages/submit.html">New Claim</a><a href="/web/pages/claims.html">Claims</a><a class="active" href="/web/pages/queue.html">Queue</a><a href="/web/pages/dashboard.html">Dashboard</a><a href="/web/pages/admin.html">Admin</a></nav></header>
+  <main class="main-content">
+    <section class="card">
+      <table class="table" id="claims-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Claimant</th>
+            <th>Policy</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+  <script>
+    const statusBadge = (s) => `<span class="status-badge status-${s}">${s}</span>`;
+    fetch('/api/claims').then(r=>r.json()).then(rows => {
+      const tbody = document.querySelector('#claims-table tbody');
+      tbody.innerHTML = '';
+      for (const r of rows.filter(c => c.status==='submitted' || c.status==='processing')) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.id}</td>
+          <td>${r.claimantId}</td>
+          <td>${r.policyId}</td>
+          <td>$${Number(r.amount||0).toFixed(2)}</td>
+          <td>${statusBadge(r.status)}</td>
+          <td>${new Date(r.updatedAt).toLocaleString()}</td>`;
+        tbody.appendChild(tr);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -9,21 +9,392 @@
 <body>
   <header class="header-bar"><div class="brand">URCovered</div><nav class="nav-links"><a href="/web/pages/submit.html">New Claim</a><a href="/web/pages/claims.html">Claims</a><a href="/web/pages/queue.html">Queue</a><a class="active" href="/web/pages/dashboard.html">Dashboard</a><a href="/web/pages/admin.html">Admin</a></nav></header>
   <main class="main-content">
-    <section class="card">
-      <div id="stats"></div>
+    <section class="card dashboard-summary">
+      <h1 class="section-heading">Portfolio Snapshot</h1>
+      <div class="metrics-grid" id="metrics-grid"></div>
+    </section>
+
+    <section class="card dashboard-fraud-overview">
+      <div class="section-header">
+        <h2 class="section-heading">Fraud Risk Overview</h2>
+        <p class="section-subheading">Understand how many claims exhibit potential fraud signals by risk tier.</p>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="fraud-risk-chart" aria-label="Fraud risk distribution" role="img"></canvas>
+      </div>
+    </section>
+
+    <section class="card dashboard-fraud-activities">
+      <div class="section-header">
+        <h2 class="section-heading">Fraud Activity Signals</h2>
+        <p class="section-subheading">Most common triggers surfaced by automated fraud detection checks.</p>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="fraud-activity-chart" aria-label="Fraud activities" role="img"></canvas>
+      </div>
+    </section>
+
+    <section class="card dashboard-distribution">
+      <div class="section-header">
+        <h2 class="section-heading">Claim Status Mix</h2>
+        <p class="section-subheading">Live distribution of active claims across the processing pipeline.</p>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="status-chart" aria-label="Claim status distribution" role="img"></canvas>
+      </div>
+    </section>
+
+    <section class="card dashboard-comparison">
+      <div class="section-header">
+        <h2 class="section-heading">Claim vs. Payout Exposure</h2>
+        <p class="section-subheading">Track outstanding exposure against paid settlements.</p>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="payout-chart" aria-label="Claim and payout comparison" role="img"></canvas>
+      </div>
+    </section>
+
+    <section class="card dashboard-trend">
+      <div class="section-header">
+        <h2 class="section-heading">Monthly Intake Trend</h2>
+        <p class="section-subheading">Incoming claim counts and total amounts over the past six months.</p>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="trend-chart" aria-label="Monthly claim trend" role="img"></canvas>
+      </div>
     </section>
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script>
-    const fmt = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n || 0);
-    fetch('/api/stats').then(r => r.json()).then((totals) => {
-      const el = document.getElementById('stats');
-      el.innerHTML = `
-        <p><strong>Total Claims:</strong> ${totals.count}</p>
-        <p><strong>Submitted:</strong> ${totals.submitted || 0} · <strong>Processing:</strong> ${totals.processing || 0} · <strong>Settled:</strong> ${totals.settled || 0} · <strong>Rejected:</strong> ${totals.rejected || 0}</p>
-        <p><strong>Total Claimed Amount:</strong> ${fmt(totals.amount)}</p>
-        <p><strong>Total Payout:</strong> ${fmt(totals.payout)}</p>
-      `;
-    });
+    const formatCurrency = (value) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(value || 0);
+    const formatNumber = (value) => new Intl.NumberFormat().format(value || 0);
+
+    const summarizeFraud = (claims) => {
+      const summary = {
+        totalScored: 0,
+        highRisk: 0,
+        mediumRisk: 0,
+        lowRisk: 0,
+        unspecifiedRisk: 0,
+        reasons: new Map(),
+        scoreSum: 0
+      };
+
+      claims.forEach((claim) => {
+        if (!claim.fraud) return;
+        summary.totalScored += 1;
+        const score = Number(claim.fraud.score);
+        if (!Number.isNaN(score)) {
+          summary.scoreSum += score;
+        }
+        const risk = (claim.fraud.risk || '').toLowerCase();
+        if (risk === 'high') {
+          summary.highRisk += 1;
+        } else if (risk === 'medium') {
+          summary.mediumRisk += 1;
+        } else if (risk === 'low') {
+          summary.lowRisk += 1;
+        } else {
+          summary.unspecifiedRisk += 1;
+        }
+        (claim.fraud.reasons || []).forEach((reason) => {
+          const trimmed = reason.trim();
+          if (!trimmed) return;
+          summary.reasons.set(trimmed, (summary.reasons.get(trimmed) || 0) + 1);
+        });
+      });
+
+      const averageScore = summary.totalScored ? summary.scoreSum / summary.totalScored : 0;
+
+      return {
+        totalScored: summary.totalScored,
+        highRisk: summary.highRisk,
+        mediumRisk: summary.mediumRisk,
+        lowRisk: summary.lowRisk,
+        unspecifiedRisk: summary.unspecifiedRisk,
+        averageScore,
+        reasons: summary.reasons
+      };
+    };
+
+    const buildMetrics = (totals, fraudSummary) => {
+      const metrics = [
+        { id: 'total-claims', label: 'Total Claims', value: formatNumber(totals.count), accentClass: 'accent-primary' },
+        { id: 'submitted-claims', label: 'Submitted', value: formatNumber(totals.submitted || 0), accentClass: 'accent-submitted' },
+        { id: 'processing-claims', label: 'Processing', value: formatNumber(totals.processing || 0), accentClass: 'accent-processing' },
+        { id: 'settled-claims', label: 'Settled', value: formatNumber(totals.settled || 0), accentClass: 'accent-settled' },
+        { id: 'rejected-claims', label: 'Rejected', value: formatNumber(totals.rejected || 0), accentClass: 'accent-rejected' },
+        { id: 'total-amount', label: 'Total Claimed', value: formatCurrency(totals.amount), accentClass: 'accent-claimed' },
+        { id: 'total-payout', label: 'Total Payout', value: formatCurrency(totals.payout), accentClass: 'accent-paid' },
+        { id: 'average-fraud', label: 'Avg Fraud Score', value: fraudSummary.totalScored ? fraudSummary.averageScore.toFixed(1) : '0.0', accentClass: 'accent-fraud-score' },
+        { id: 'fraud-cases', label: 'Fraud-Scored Claims', value: formatNumber(fraudSummary.totalScored), accentClass: 'accent-fraud-cases' },
+        { id: 'high-risk-cases', label: 'High Risk Cases', value: formatNumber(fraudSummary.highRisk), accentClass: 'accent-risk-high' },
+        { id: 'fraud-signals', label: 'Unique Fraud Signals', value: formatNumber(fraudSummary.reasons.size), accentClass: 'accent-activity-count' }
+      ];
+
+      const container = document.getElementById('metrics-grid');
+      container.innerHTML = metrics.map((metric) => `
+        <article class="metric-card ${metric.accentClass}" data-metric="${metric.id}">
+          <span class="metric-label">${metric.label}</span>
+          <span class="metric-value">${metric.value}</span>
+        </article>
+      `).join('');
+    };
+
+    const createFraudRiskChart = (fraudSummary) => {
+      const ctx = document.getElementById('fraud-risk-chart');
+      const riskSegments = [
+        { label: 'High', value: fraudSummary.highRisk, color: '#d9480f' },
+        { label: 'Medium', value: fraudSummary.mediumRisk, color: '#f59f00' },
+        { label: 'Low', value: fraudSummary.lowRisk, color: '#2f9e44' },
+        { label: 'Unspecified', value: fraudSummary.unspecifiedRisk, color: '#868e96' }
+      ].filter((segment) => segment.value > 0);
+
+      const hasData = riskSegments.length > 0;
+      const labels = hasData ? riskSegments.map((segment) => segment.label) : ['No Fraud Signals'];
+      const data = hasData ? riskSegments.map((segment) => segment.value) : [1];
+      const colors = hasData ? riskSegments.map((segment) => segment.color) : ['#ced4da'];
+
+      return new Chart(ctx, {
+        type: 'polarArea',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: colors,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  if (!hasData) {
+                    return 'No fraud signals detected';
+                  }
+                  return `${context.label}: ${formatNumber(context.raw)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            r: {
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    };
+
+    const createFraudActivityChart = (fraudSummary) => {
+      const ctx = document.getElementById('fraud-activity-chart');
+      const palette = ['#0b5fff', '#5f3dc4', '#2f9e44', '#f59f00', '#d9480f', '#0ca678'];
+      const entries = Array.from(fraudSummary.reasons.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
+      const hasData = entries.length > 0;
+      const labels = hasData ? entries.map(([reason]) => reason) : ['No recorded fraud activities'];
+      const data = hasData ? entries.map(([, count]) => count) : [0];
+
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Occurrences',
+            data,
+            backgroundColor: labels.map((_, index) => palette[index % palette.length])
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  if (!hasData) {
+                    return 'No fraud activities recorded';
+                  }
+                  return `${context.label}: ${formatNumber(context.raw)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            }
+          }
+        }
+      });
+    };
+
+    const createStatusChart = (totals) => {
+      const ctx = document.getElementById('status-chart');
+      return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Submitted', 'Processing', 'Settled', 'Rejected'],
+          datasets: [{
+            data: [totals.submitted || 0, totals.processing || 0, totals.settled || 0, totals.rejected || 0],
+            backgroundColor: ['#f59f00', '#228be6', '#2f9e44', '#d9480f'],
+            borderColor: '#fff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom' }
+          },
+          cutout: '60%'
+        }
+      });
+    };
+
+    const createPayoutChart = (totals) => {
+      const ctx = document.getElementById('payout-chart');
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Exposure'],
+          datasets: [
+            {
+              label: 'Claimed',
+              data: [totals.amount || 0],
+              backgroundColor: '#0b5fff'
+            },
+            {
+              label: 'Paid Out',
+              data: [totals.payout || 0],
+              backgroundColor: '#0ca678'
+            }
+          ]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: (value) => formatCurrency(value)
+              }
+            }
+          }
+        }
+      });
+    };
+
+    const createTrendChart = (claims) => {
+      const counts = new Map();
+      const amounts = new Map();
+
+      claims.forEach((claim) => {
+        const timestamp = claim.createdAt || claim.updatedAt;
+        if (!timestamp) return;
+        const eventDate = new Date(timestamp);
+        if (Number.isNaN(eventDate.getTime())) return;
+        const key = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}`;
+        counts.set(key, (counts.get(key) || 0) + 1);
+        amounts.set(key, (amounts.get(key) || 0) + (claim.amount || 0));
+      });
+
+      let sortedKeys = Array.from(counts.keys()).sort().slice(-6);
+      if (!sortedKeys.length) {
+        const now = new Date();
+        const fallbackKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        counts.set(fallbackKey, 0);
+        amounts.set(fallbackKey, 0);
+        sortedKeys = [fallbackKey];
+      }
+      const labels = sortedKeys.map((key) => {
+        const [year, month] = key.split('-');
+        return new Date(Number(year), Number(month) - 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+      });
+
+      const ctx = document.getElementById('trend-chart');
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Claim Count',
+              data: sortedKeys.map((key) => counts.get(key) || 0),
+              borderColor: '#0b5fff',
+              backgroundColor: 'rgba(11, 95, 255, 0.15)',
+              tension: 0.4,
+              yAxisID: 'y',
+              fill: true
+            },
+            {
+              label: 'Claim Amount',
+              data: sortedKeys.map((key) => amounts.get(key) || 0),
+              borderColor: '#2f9e44',
+              backgroundColor: 'rgba(47, 158, 68, 0.15)',
+              tension: 0.4,
+              yAxisID: 'y1',
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          stacked: false,
+          scales: {
+            y: {
+              type: 'linear',
+              position: 'left',
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              beginAtZero: true,
+              grid: { drawOnChartArea: false },
+              ticks: {
+                callback: (value) => formatCurrency(value)
+              }
+            }
+          }
+        }
+      });
+    };
+
+    const initializeDashboard = async () => {
+      try {
+        const [totalsResponse, claimsResponse] = await Promise.all([
+          fetch('/api/stats'),
+          fetch('/api/claims')
+        ]);
+        const totals = await totalsResponse.json();
+        const claims = await claimsResponse.json();
+        const fraudSummary = summarizeFraud(claims);
+
+        buildMetrics(totals, fraudSummary);
+        createFraudRiskChart(fraudSummary);
+        createFraudActivityChart(fraudSummary);
+        createStatusChart(totals);
+        createPayoutChart(totals);
+        createTrendChart(claims);
+      } catch (error) {
+        console.error('Failed to load dashboard data', error);
+      }
+    };
+
+    initializeDashboard();
   </script>
 </body>
 </html>

@@ -2,6 +2,7 @@ import http from 'http';
 import { promises as fs } from 'fs';
 import path from 'path';
 import url from 'url';
+import crypto from 'crypto';
 import Busboy from 'busboy';
 import { readJson, appendToArray, writeJson } from './db/fileDb.js';
 import { processClaim } from './agent/processClaim.js';
@@ -14,11 +15,43 @@ const WEB_DIR = path.join(ROOT, 'web');
 const CLAIMS_PATH = 'data/db/claims.json';
 const PERSONS_PATH = 'data/db/persons.json';
 const POLICIES_PATH = 'data/db/policies.json';
+const OAUTH_STATE_TTL = 10 * 60 * 1000;
+const pendingOAuthStates = new Map();
 
 const send = (res, code, body, headers = {}) => {
   const data = typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body);
   res.writeHead(code, { 'content-type': typeof body === 'string' || Buffer.isBuffer(body) ? 'text/plain' : 'application/json', ...headers });
   res.end(data);
+};
+
+const purgeExpiredOAuthStates = () => {
+  const now = Date.now();
+  for (const [key, created] of pendingOAuthStates.entries()) {
+    if (now - created > OAUTH_STATE_TTL) pendingOAuthStates.delete(key);
+  }
+};
+
+const createOAuthState = () => {
+  purgeExpiredOAuthStates();
+  const state = crypto.randomBytes(16).toString('hex');
+  pendingOAuthStates.set(state, Date.now());
+  return state;
+};
+
+const consumeOAuthState = (state) => {
+  purgeExpiredOAuthStates();
+  const created = pendingOAuthStates.get(state);
+  if (!created) return false;
+  pendingOAuthStates.delete(state);
+  return Date.now() - created <= OAUTH_STATE_TTL;
+};
+
+const resolveBoxRedirectUri = (req) => {
+  if (process.env.BOX_REDIRECT_URI) return process.env.BOX_REDIRECT_URI;
+  const host = req.headers.host;
+  if (!host) return null;
+  const proto = req.headers['x-forwarded-proto'] || 'http';
+  return `${proto}://${host}/oauth/box/callback`;
 };
 
 const serveStatic = async (req, res, pathname) => {
@@ -152,10 +185,81 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Connectors APIs
+  if (pathname === '/api/connectors/box/oauth/url' && req.method === 'GET') {
+    const clientId = process.env.BOX_CLIENT_ID;
+    const clientSecret = process.env.BOX_CLIENT_SECRET;
+    if (!clientId || !clientSecret) return send(res, 500, { error: 'Box OAuth not configured' });
+    const redirectUri = resolveBoxRedirectUri(req);
+    if (!redirectUri) return send(res, 500, { error: 'Cannot determine redirect URI' });
+    const state = createOAuthState();
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      state,
+      scope: 'root_readwrite'
+    });
+    const authUrl = `https://account.box.com/api/oauth2/authorize?${params.toString()}`;
+    return send(res, 200, { url: authUrl });
+  }
+
   if (pathname === '/api/connectors' && req.method === 'GET') {
     const creds = await readCreds();
-    const list = connectors.map((c) => ({ id: c.id, name: c.name, type: c.type, requiredFields: c.requiredFields, connected: isConnected(c.id, creds) }));
+    const list = connectors.map((c) => ({ id: c.id, name: c.name, type: c.type, requiredFields: c.requiredFields, connected: isConnected(c.id, creds), oauth: !!c.supportsOAuth }));
     return send(res, 200, list);
+  }
+
+  if (pathname === '/oauth/box/callback' && req.method === 'GET') {
+    const clientId = process.env.BOX_CLIENT_ID;
+    const clientSecret = process.env.BOX_CLIENT_SECRET;
+    const redirectUri = resolveBoxRedirectUri(req);
+    if (!clientId || !clientSecret || !redirectUri) {
+      return send(res, 500, 'Box OAuth not configured');
+    }
+    const query = new url.URL(req.url, 'http://localhost');
+    const error = query.searchParams.get('error');
+    if (error) {
+      return send(res, 400, `Box OAuth error: ${error}`);
+    }
+    const code = query.searchParams.get('code');
+    const state = query.searchParams.get('state');
+    if (!code || !state) {
+      return send(res, 400, 'Missing authorization code or state');
+    }
+    if (!consumeOAuthState(state)) {
+      return send(res, 400, 'Invalid or expired state');
+    }
+
+    const tokenParams = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri
+    });
+    const tokenRes = await fetch('https://api.box.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: tokenParams.toString()
+    });
+    const payload = await tokenRes.json().catch(() => ({}));
+    if (!tokenRes.ok || !payload.access_token) {
+      return send(res, 400, `Box token exchange failed: ${payload.error_description || 'Unknown error'}`);
+    }
+    const creds = await readCreds();
+    const expiresIn = Number(payload.expires_in) || 0;
+    creds.box = {
+      accessToken: payload.access_token,
+      refreshToken: payload.refresh_token,
+      tokenType: payload.token_type,
+      scope: payload.scope,
+      expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null,
+      obtainedAt: new Date().toISOString()
+    };
+    await writeCreds(creds);
+    res.writeHead(302, { Location: '/web/pages/admin.html?box=connected' });
+    res.end();
+    return;
   }
 
   if (pathname.startsWith('/api/connectors/') && pathname.endsWith('/credentials') && req.method === 'POST') {

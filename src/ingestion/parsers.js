@@ -1,5 +1,5 @@
 import { parse as parseCsvSync } from 'csv-parse/sync';
-import pdf from 'pdf-parse';
+import pdf from 'pdf-parse/lib/pdf-parse.js';
 
 export const parseTxtClaim = (content) => {
   const obj = {};

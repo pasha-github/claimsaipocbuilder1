@@ -1,11 +1,12 @@
 import { promises as fs } from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
 
 const ROOT = process.cwd();
 const CREDS_PATH = 'data/connectors/credentials.json';
 
 export const connectors = [
-  { id: 'box', name: 'Box', type: 'storage', path: 'data/connectors/box', requiredFields: ['accessToken'] },
+  { id: 'box', name: 'Box', type: 'storage', path: 'data/connectors/box', requiredFields: [], supportsOAuth: true },
   { id: 'onedrive', name: 'OneDrive', type: 'storage', path: 'data/connectors/onedrive', requiredFields: ['accessToken'] },
   { id: 'duckcreek', name: 'DuckCreek', type: 'pas', requiredFields: ['apiKey', 'baseUrl'] },
   { id: 'guidewire', name: 'Guidewire', type: 'pas', requiredFields: ['apiKey', 'baseUrl'] }
@@ -30,6 +31,9 @@ export const isConnected = (id, creds) => {
   if (!cfg) return false;
   const c = (creds || {})[id];
   if (!c) return false;
+  if (cfg.supportsOAuth) {
+    return typeof c.accessToken === 'string' && c.accessToken.trim().length > 0;
+  }
   return (cfg.requiredFields || []).every((f) => typeof c[f] === 'string' && c[f].trim().length > 0);
 };
 

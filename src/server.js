@@ -106,6 +106,17 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, totals);
   }
 
+  // Policy/Person lookup
+  if (pathname?.startsWith('/api/policies/') && req.method === 'GET') {
+    const id = pathname.split('/').pop();
+    const policies = await readJson(POLICIES_PATH, []);
+    const policy = policies.find((p) => p.id === id || p.policyNumber === id);
+    if (!policy) return send(res, 404, { error: 'Policy not found' });
+    const persons = await readJson(PERSONS_PATH, []);
+    const person = persons.find((p) => p.id === policy.personId);
+    return send(res, 200, { policy, person });
+  }
+
   // Connectors APIs
   if (pathname === '/api/connectors' && req.method === 'GET') {
     const creds = await readCreds();

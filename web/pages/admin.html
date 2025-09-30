@@ -13,6 +13,19 @@
       <h2 class="section-title">Connectors</h2>
       <div id="connectors" class="connector-grid"></div>
     </section>
+
+    <section class="card" style="margin-top:12px">
+      <h2 class="section-title">Import Claims (CSV)</h2>
+      <div class="form-grid">
+        <div class="input-group grid-span-2">
+          <label class="input-label">CSV File</label>
+          <input class="input-field" id="csvFile" type="file" accept=".csv,text/csv" />
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="button-primary" id="importCsv">Import to Database</button>
+      </div>
+    </section>
   </main>
   <script>
     const render = (list) => {

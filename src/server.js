@@ -125,6 +125,32 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { policy, person });
   }
 
+  // Import CSV (insurance dataset)
+  if (pathname === '/api/import/csv' && req.method === 'POST') {
+    const text = await parseText(req);
+    const { claims: newClaims, policies: newPolicies } = parseInsuranceDatasetCsv(text);
+    const policies = await readJson(POLICIES_PATH, []);
+    const policiesById = new Map(policies.map(p => [p.id, p]));
+    let addedPolicies = 0;
+    for (const p of newPolicies) {
+      if (!policiesById.has(p.id)) {
+        policiesById.set(p.id, p);
+        addedPolicies++;
+      }
+    }
+    await writeJson(POLICIES_PATH, Array.from(policiesById.values()));
+
+    const claims = await readJson(CLAIMS_PATH, []);
+    for (const c of newClaims) claims.push(c);
+    await writeJson(CLAIMS_PATH, claims);
+
+    for (const c of newClaims) {
+      await processClaim(c.id);
+    }
+
+    return send(res, 200, { imported: newClaims.length, policiesAdded: addedPolicies });
+  }
+
   // Connectors APIs
   if (pathname === '/api/connectors' && req.method === 'GET') {
     const creds = await readCreds();

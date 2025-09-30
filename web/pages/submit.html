@@ -76,6 +76,44 @@
   <script>
     const el = (id) => document.getElementById(id);
     let uploaded = [];
+
+    const INCIDENT_TYPES = {
+      Auto: ['AutoCollision','AutoTheft','AutoInjury','WindshieldDamage','Vandalism'],
+      Home: ['HomeTheft','HomeFire','HomeWaterDamage','NaturalDisaster','Liability']
+    };
+
+    const setIncidentOptions = (product) => {
+      const sel = el('incidentType');
+      sel.innerHTML = '';
+      (INCIDENT_TYPES[product] || []).forEach((t) => {
+        const opt = document.createElement('option');
+        opt.value = t; opt.textContent = t; sel.appendChild(opt);
+      });
+    };
+
+    el('product').addEventListener('change', () => setIncidentOptions(el('product').value));
+    setIncidentOptions(el('product').value || 'Auto');
+
+    const lookupPolicy = async () => {
+      const id = el('policyId').value.trim();
+      if (!id) return;
+      const res = await fetch(`/api/policies/${encodeURIComponent(id)}`);
+      if (!res.ok) return;
+      const { policy, person } = await res.json();
+      if (policy?.product) {
+        el('product').value = policy.product;
+        setIncidentOptions(policy.product);
+      }
+      if (person?.address) {
+        if (person.address.city) el('city').value = person.address.city;
+        if (person.address.state) el('state').value = person.address.state;
+      }
+      if (person?.id) {
+        el('claimantId').value = person.id;
+      }
+    };
+    el('policyId').addEventListener('blur', lookupPolicy);
+
     const buildClaim = () => ({
       id: `CLM-${Date.now()}`,
       claimantId: el('claimantId').value.trim(),

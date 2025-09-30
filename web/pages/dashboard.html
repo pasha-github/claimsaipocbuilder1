@@ -167,7 +167,17 @@
         },
         options: {
           plugins: {
-            legend: { position: 'bottom' }
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  if (!hasData) {
+                    return 'No fraud signals detected';
+                  }
+                  return `${context.label}: ${formatNumber(context.raw)}`;
+                }
+              }
+            }
           },
           scales: {
             r: {
@@ -201,7 +211,17 @@
         options: {
           indexAxis: 'y',
           plugins: {
-            legend: { display: false }
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  if (!hasData) {
+                    return 'No fraud activities recorded';
+                  }
+                  return `${context.label}: ${formatNumber(context.raw)}`;
+                }
+              }
+            }
           },
           scales: {
             x: {

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>URCovered — Admin Connectors</title>
+  <link rel="stylesheet" href="../styles/site.css" />
+</head>
+<body>
+  <header class="header-bar"><div class="brand">URCovered</div><nav class="nav-links"><a href="/web/pages/submit.html">New Claim</a><a href="/web/pages/claims.html">Claims</a><a href="/web/pages/queue.html">Queue</a><a href="/web/pages/dashboard.html">Dashboard</a><a class="active" href="/web/pages/admin.html">Admin</a></nav></header>
+  <main class="main-content">
+    <section class="card">
+      <h2 class="section-title">Connectors</h2>
+      <div id="connectors" class="connector-grid"></div>
+    </section>
+  </main>
+  <script>
+    const render = (list) => {
+      const root = document.getElementById('connectors');
+      root.innerHTML = '';
+      for (const c of list) {
+        const card = document.createElement('div');
+        card.className = 'connector-card';
+        card.innerHTML = `
+          <div class="connector-head"><div class="connector-name">${c.name}</div><div class="connector-status ${c.connected ? 'ok' : 'off'}">${c.connected ? 'Connected' : 'Not Connected'}</div></div>
+          <form class="connector-form" data-id="${c.id}">
+            <div class="form-grid">
+              ${(c.requiredFields||[]).map(f => `
+                <div class="input-group">
+                  <label class="input-label">${f}</label>
+                  <input class="input-field" name="${f}" placeholder="enter ${f}" />
+                </div>`).join('')}
+            </div>
+            <div class="actions">
+              <button type="submit" class="button-primary">Save Credentials</button>
+              ${c.type==='storage' ? '<button type="button" class="button-secondary list-btn">List Files</button>' : ''}
+            </div>
+            <div class="connector-files" style="margin-top:8px"></div>
+          </form>`;
+        root.appendChild(card);
+      }
+
+      // wire up forms
+      document.querySelectorAll('.connector-form').forEach(form => {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const id = form.getAttribute('data-id');
+          const fd = new FormData(form);
+          const body = {}; fd.forEach((v,k) => body[k]=v);
+          const res = await fetch(`/api/connectors/${id}/credentials`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+          if (!res.ok) return alert('Save failed');
+          await load();
+          alert('Saved');
+        });
+        const btn = form.querySelector('.list-btn');
+        if (btn) btn.addEventListener('click', async () => {
+          const id = form.getAttribute('data-id');
+          const res = await fetch(`/api/connectors/${id}/files`);
+          const files = res.ok ? await res.json() : [];
+          const box = form.querySelector('.connector-files');
+          box.innerHTML = files.length ? '<ul>'+files.map(f=>`<li>${f.name}</li>`).join('')+'</ul>' : '<em>No files</em>';
+        });
+      });
+    };
+
+    const load = async () => {
+      const res = await fetch('/api/connectors');
+      const list = await res.json();
+      render(list);
+    };
+    load();
+  </script>
+</body>
+</html>

@@ -7,9 +7,13 @@
       "date": "2025-08-20",
       "type": "AutoCollision",
       "description": "Rear-end collision at intersection. Minor bumper damage.",
-      "location": { "city": "Austin", "state": "TX", "country": "US" }
+      "location": {
+        "city": "Austin",
+        "state": "TX",
+        "country": "US"
+      }
     },
-    "amount": 850.0,
+    "amount": 850,
     "attachments": [],
     "channel": "portal",
     "status": "submitted",
@@ -25,10 +29,16 @@
       "date": "2025-08-28",
       "type": "HomeTheft",
       "description": "Reported theft of electronics. Police report filed.",
-      "location": { "city": "Seattle", "state": "WA", "country": "US" }
+      "location": {
+        "city": "Seattle",
+        "state": "WA",
+        "country": "US"
+      }
     },
-    "amount": 4200.0,
-    "attachments": ["police-report-1002.pdf"],
+    "amount": 4200,
+    "attachments": [
+      "police-report-1002.pdf"
+    ],
     "channel": "portal",
     "status": "submitted",
     "flags": [],
@@ -43,10 +53,16 @@
       "date": "2025-09-04",
       "type": "AutoInjury",
       "description": "Whiplash after minor fender bender. ER visit same day.",
-      "location": { "city": "Miami", "state": "FL", "country": "US" }
+      "location": {
+        "city": "Miami",
+        "state": "FL",
+        "country": "US"
+      }
     },
-    "amount": 9800.0,
-    "attachments": ["er-bill-2331.pdf"],
+    "amount": 9800,
+    "attachments": [
+      "er-bill-2331.pdf"
+    ],
     "channel": "paper",
     "status": "submitted",
     "flags": [],
@@ -61,9 +77,13 @@
       "date": "2025-09-10",
       "type": "HomeWaterDamage",
       "description": "Pipe burst in kitchen leading to floor damage.",
-      "location": { "city": "Seattle", "state": "WA", "country": "US" }
+      "location": {
+        "city": "Seattle",
+        "state": "WA",
+        "country": "US"
+      }
     },
-    "amount": 1200.0,
+    "amount": 1200,
     "attachments": [],
     "channel": "portal",
     "status": "submitted",
@@ -79,14 +99,80 @@
       "date": "2025-09-15",
       "type": "AutoCollision",
       "description": "Severe collision reported with high repair estimate.",
-      "location": { "city": "Newark", "state": "NJ", "country": "US" }
+      "location": {
+        "city": "Newark",
+        "state": "NJ",
+        "country": "US"
+      }
     },
-    "amount": 21500.0,
-    "attachments": ["bodyshop-estimate-932.pdf"],
+    "amount": 21500,
+    "attachments": [
+      "bodyshop-estimate-932.pdf"
+    ],
     "channel": "paper",
     "status": "submitted",
     "flags": [],
     "createdAt": "2025-09-16T09:10:00Z",
     "updatedAt": "2025-09-16T09:10:00Z"
+  },
+  {
+    "id": "CLM-1759251169299",
+    "claimantId": "",
+    "policyId": "",
+    "incident": {
+      "date": "",
+      "type": "",
+      "description": "",
+      "location": {
+        "city": "",
+        "state": "",
+        "country": "US"
+      }
+    },
+    "amount": null,
+    "attachments": [],
+    "channel": "portal",
+    "status": "rejected",
+    "createdAt": "2025-09-30T16:52:49.413Z",
+    "updatedAt": "2025-09-30T16:52:49.416Z",
+    "decision": {
+      "status": "rejected",
+      "reason": "Validation errors",
+      "payout": 0
+    },
+    "fraud": {
+      "score": 5,
+      "risk": "low",
+      "reasons": [
+        "No supporting attachments"
+      ]
+    },
+    "validation": [
+      {
+        "code": "MISSING_CLAIMANT",
+        "severity": "error",
+        "message": "Claimant missing"
+      },
+      {
+        "code": "MISSING_POLICY",
+        "severity": "error",
+        "message": "Policy missing"
+      },
+      {
+        "code": "MISSING_INCIDENT",
+        "severity": "error",
+        "message": "Incident details incomplete"
+      },
+      {
+        "code": "INVALID_AMOUNT",
+        "severity": "error",
+        "message": "Claim amount must be positive number"
+      },
+      {
+        "code": "POLICY_INACTIVE",
+        "severity": "error",
+        "message": "Policy inactive or not found"
+      }
+    ]
   }
 ]

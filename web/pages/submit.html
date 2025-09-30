@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="../styles/site.css" />
 </head>
 <body>
-  <header class="header-bar"><h1 class="header-title">Insurance Claims Portal — Submit</h1></header>
+  <header class="header-bar"><div class="brand">URCovered</div><nav class="nav-links"><a class="active" href="/web/pages/submit.html">New Claim</a><a href="/web/pages/claims.html">Claims</a><a href="/web/pages/queue.html">Queue</a><a href="/web/pages/dashboard.html">Dashboard</a><a href="/web/pages/admin.html">Admin</a></nav></header>
   <main class="main-content">
     <section class="card">
       <form id="claim-form">
@@ -45,7 +45,20 @@
             <input class="input-field" id="amount" type="number" step="0.01" min="0.01" required />
           </div>
         </div>
+        <div class="input-group grid-span-2">
+          <label class="input-label">Attachments</label>
+          <input class="input-field" id="files" type="file" multiple />
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="connector">Destination</label>
+          <select class="input-field" id="connector">
+            <option value="">None</option>
+            <option value="box">Box</option>
+            <option value="onedrive">OneDrive</option>
+          </select>
+        </div>
         <div class="actions">
+          <button type="button" class="button-primary" id="upload">Upload Files</button>
           <button type="button" class="button-primary" id="submit-api">Submit to API</button>
           <button type="button" class="button-secondary" id="download-json">Download Claim JSON</button>
           <button type="reset" class="button-secondary">Reset</button>
@@ -55,6 +68,7 @@
   </main>
   <script>
     const el = (id) => document.getElementById(id);
+    let uploaded = [];
     const buildClaim = () => ({
       id: `CLM-${Date.now()}`,
       claimantId: el('claimantId').value.trim(),
@@ -80,8 +94,22 @@
       alert('Claim JSON downloaded. Drop it into data/inbox to simulate submission.');
     });
 
+    document.getElementById('upload').addEventListener('click', async () => {
+      const connector = el('connector').value;
+      if (!connector) { alert('Select a destination'); return; }
+      const files = el('files').files;
+      if (!files || files.length === 0) { alert('Choose files'); return; }
+      const form = new FormData();
+      for (const f of files) form.append('files', f, f.name);
+      const res = await fetch(`/api/connectors/${connector}/upload`, { method: 'POST', body: form });
+      if (!res.ok) { alert('Upload failed — ensure connector credentials are saved in Admin'); return; }
+      uploaded = await res.json();
+      alert(`Uploaded ${uploaded.length} file(s).`);
+    });
+
     document.getElementById('submit-api').addEventListener('click', async () => {
       const claim = buildClaim();
+      claim.attachments = uploaded;
       const res = await fetch('/api/claims', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(claim) });
       if (!res.ok) { alert('Submission failed'); return; }
       const data = await res.json();

@@ -50,20 +50,20 @@
 
     const buildMetrics = (totals) => {
       const metrics = [
-        { id: 'total-claims', label: 'Total Claims', value: totals.count, accent: '#0b5fff' },
-        { id: 'submitted-claims', label: 'Submitted', value: totals.submitted || 0, accent: '#f59f00' },
-        { id: 'processing-claims', label: 'Processing', value: totals.processing || 0, accent: '#228be6' },
-        { id: 'settled-claims', label: 'Settled', value: totals.settled || 0, accent: '#2f9e44' },
-        { id: 'rejected-claims', label: 'Rejected', value: totals.rejected || 0, accent: '#d9480f' },
-        { id: 'total-amount', label: 'Total Claimed', value: formatCurrency(totals.amount), accent: '#5f3dc4' },
-        { id: 'total-payout', label: 'Total Payout', value: formatCurrency(totals.payout), accent: '#0ca678' }
+        { id: 'total-claims', label: 'Total Claims', value: totals.count, accentClass: 'accent-primary' },
+        { id: 'submitted-claims', label: 'Submitted', value: totals.submitted || 0, accentClass: 'accent-submitted' },
+        { id: 'processing-claims', label: 'Processing', value: totals.processing || 0, accentClass: 'accent-processing' },
+        { id: 'settled-claims', label: 'Settled', value: totals.settled || 0, accentClass: 'accent-settled' },
+        { id: 'rejected-claims', label: 'Rejected', value: totals.rejected || 0, accentClass: 'accent-rejected' },
+        { id: 'total-amount', label: 'Total Claimed', value: formatCurrency(totals.amount), accentClass: 'accent-claimed' },
+        { id: 'total-payout', label: 'Total Payout', value: formatCurrency(totals.payout), accentClass: 'accent-paid' }
       ];
 
       const container = document.getElementById('metrics-grid');
       container.innerHTML = metrics.map((metric) => `
-        <article class="metric-card" data-metric="${metric.id}">
+        <article class="metric-card ${metric.accentClass}" data-metric="${metric.id}">
           <span class="metric-label">${metric.label}</span>
-          <span class="metric-value" style="color:${metric.accent};">${metric.value}</span>
+          <span class="metric-value">${metric.value}</span>
         </article>
       `).join('');
     };
@@ -144,7 +144,14 @@
         amounts.set(key, (amounts.get(key) || 0) + (claim.amount || 0));
       });
 
-      const sortedKeys = Array.from(counts.keys()).sort().slice(-6);
+      let sortedKeys = Array.from(counts.keys()).sort().slice(-6);
+      if (!sortedKeys.length) {
+        const now = new Date();
+        const fallbackKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        counts.set(fallbackKey, 0);
+        amounts.set(fallbackKey, 0);
+        sortedKeys = [fallbackKey];
+      }
       const labels = sortedKeys.map((key) => {
         const [year, month] = key.split('-');
         return new Date(Number(year), Number(month) - 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });

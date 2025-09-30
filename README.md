@@ -62,12 +62,12 @@ For multi-service setups or background workers, create a `docker-compose.yml` th
 1. Authenticate with Amazon ECR and create a repository named `claims-ai-agent`:
    ```bash
    aws ecr create-repository --repository-name claims-ai-agent
-   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <aws_account_id>.dkr.ecr.us-east-1.amazonaws.com
+   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 123456789012.dkr.ecr.us-east-1.amazonaws.com
    ```
 2. Tag and push the Docker image:
    ```bash
-   docker tag claims-ai-agent:latest <aws_account_id>.dkr.ecr.us-east-1.amazonaws.com/claims-ai-agent:latest
-   docker push <aws_account_id>.dkr.ecr.us-east-1.amazonaws.com/claims-ai-agent:latest
+   docker tag claims-ai-agent:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/claims-ai-agent:latest
+   docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/claims-ai-agent:latest
    ```
 3. Create an ECS cluster and a Fargate task definition referencing the pushed image, container port 3000, and 512 MiB / 0.25 vCPU.
 4. Define a Fargate service with an Application Load Balancer forwarding HTTP traffic to port 3000.
@@ -101,13 +101,13 @@ For multi-service setups or background workers, create a `docker-compose.yml` th
    ```
 3. Tag and push the image:
    ```bash
-   docker tag claims-ai-agent:latest us-central1-docker.pkg.dev/<gcp_project_id>/claims-ai-agent/claims-ai-agent:latest
-   docker push us-central1-docker.pkg.dev/<gcp_project_id>/claims-ai-agent/claims-ai-agent:latest
+   docker tag claims-ai-agent:latest us-central1-docker.pkg.dev/my-gcp-project/claims-ai-agent/claims-ai-agent:latest
+   docker push us-central1-docker.pkg.dev/my-gcp-project/claims-ai-agent/claims-ai-agent:latest
    ```
 4. Deploy to Cloud Run:
    ```bash
    gcloud run deploy claims-ai-agent \
-     --image us-central1-docker.pkg.dev/<gcp_project_id>/claims-ai-agent/claims-ai-agent:latest \
+     --image us-central1-docker.pkg.dev/my-gcp-project/claims-ai-agent/claims-ai-agent:latest \
      --platform managed \
      --region us-central1 \
      --allow-unauthenticated \

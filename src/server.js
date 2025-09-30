@@ -60,6 +60,13 @@ const parseUploads = (req) => new Promise((resolve, reject) => {
   } catch (e) { reject(e); }
 });
 
+const parseText = (req) => new Promise((resolve, reject) => {
+  let data = '';
+  req.on('data', (chunk) => { data += chunk; });
+  req.on('end', () => resolve(data));
+  req.on('error', reject);
+});
+
 const server = http.createServer(async (req, res) => {
   const { pathname } = new url.URL(req.url, 'http://localhost');
 

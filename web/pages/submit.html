@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Submit Claim</title>
+  <link rel="stylesheet" href="../styles/site.css" />
+</head>
+<body>
+  <header class="header-bar"><h1 class="header-title">Insurance Claims Portal — Submit</h1></header>
+  <main class="main-content">
+    <section class="card">
+      <form id="claim-form">
+        <div class="form-grid">
+          <div class="input-group">
+            <label class="input-label" for="claimantId">Claimant ID</label>
+            <input class="input-field" id="claimantId" required />
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="policyId">Policy ID</label>
+            <input class="input-field" id="policyId" required />
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="incidentDate">Incident Date</label>
+            <input class="input-field" id="incidentDate" type="date" required />
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="incidentType">Incident Type</label>
+            <input class="input-field" id="incidentType" placeholder="AutoCollision, HomeTheft..." required />
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="city">City</label>
+            <input class="input-field" id="city" />
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="state">State</label>
+            <input class="input-field" id="state" />
+          </div>
+          <div class="input-group" style="grid-column: 1 / span 2;">
+            <label class="input-label" for="description">Description</label>
+            <textarea class="input-field" id="description" rows="4"></textarea>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="amount">Amount (USD)</label>
+            <input class="input-field" id="amount" type="number" step="0.01" min="0.01" required />
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" class="button-primary" id="download-json">Download Claim JSON</button>
+          <button type="reset" class="button-secondary">Reset</button>
+        </div>
+      </form>
+    </section>
+  </main>
+  <script>
+    const el = (id) => document.getElementById(id);
+    document.getElementById('download-json').addEventListener('click', () => {
+      const claim = {
+        id: `CLM-${Date.now()}`,
+        claimantId: el('claimantId').value.trim(),
+        policyId: el('policyId').value.trim(),
+        incident: {
+          date: el('incidentDate').value,
+          type: el('incidentType').value.trim(),
+          description: el('description').value.trim(),
+          location: { city: el('city').value.trim(), state: el('state').value.trim(), country: 'US' }
+        },
+        amount: parseFloat(el('amount').value),
+        attachments: [],
+        channel: 'portal',
+        status: 'submitted',
+        flags: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(claim, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${claim.id}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      alert('Claim JSON downloaded. Drop it into data/inbox to simulate submission.');
+    });
+  </script>
+</body>
+</html>

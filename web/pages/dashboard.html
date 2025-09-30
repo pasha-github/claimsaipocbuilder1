@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claims Dashboard</title>
+  <link rel="stylesheet" href="../styles/site.css" />
+</head>
+<body>
+  <header class="header-bar"><h1 class="header-title">Claims Operations Dashboard</h1></header>
+  <main class="main-content">
+    <section class="card">
+      <div id="stats"></div>
+    </section>
+  </main>
+  <script>
+    const fmt = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n);
+    fetch('./data/claims-sample.json').then(r => r.json()).then((rows) => {
+      const totals = rows.reduce((acc, c) => {
+        acc.count++;
+        acc.amount += c.amount;
+        acc[c.status] = (acc[c.status] || 0) + 1;
+        acc.payout = (acc.payout || 0) + (c.decision?.payout || 0);
+        return acc;
+      }, { count: 0, amount: 0, payout: 0 });
+      const el = document.getElementById('stats');
+      el.innerHTML = `
+        <p><strong>Total Claims:</strong> ${totals.count}</p>
+        <p><strong>Submitted:</strong> ${totals.submitted || 0} · <strong>Processing:</strong> ${totals.processing || 0} · <strong>Settled:</strong> ${totals.settled || 0} · <strong>Rejected:</strong> ${totals.rejected || 0}</p>
+        <p><strong>Total Claimed Amount:</strong> ${fmt(totals.amount)}</p>
+        <p><strong>Total Payout:</strong> ${fmt(totals.payout)}</p>
+      `;
+    });
+  </script>
+</body>
+</html>

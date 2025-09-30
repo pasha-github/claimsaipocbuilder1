@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claims List</title>
+  <link rel="stylesheet" href="../styles/site.css" />
+</head>
+<body>
+  <header class="header-bar"><h1 class="header-title">Insurance Claims Portal — Claims</h1></header>
+  <main class="main-content">
+    <section class="card">
+      <table class="table" id="claims-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Claimant</th>
+            <th>Policy</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+  <script>
+    const statusBadge = (status) => `<span class="status-badge status-${status}">${status}</span>`;
+    fetch('./data/claims-sample.json').then(r => r.json()).then((rows) => {
+      const tbody = document.querySelector('#claims-table tbody');
+      tbody.innerHTML = '';
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.id}</td>
+          <td>${r.claimantId}</td>
+          <td>${r.policyId}</td>
+          <td>$${r.amount.toFixed(2)}</td>
+          <td>${statusBadge(r.status)}</td>
+          <td>${new Date(r.updatedAt).toLocaleString()}</td>`;
+        tbody.appendChild(tr);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "CLM-1001",
+    "claimantId": "P-001",
+    "policyId": "POL-001",
+    "incident": {
+      "date": "2025-08-20",
+      "type": "AutoCollision",
+      "description": "Rear-end collision at intersection. Minor bumper damage.",
+      "location": { "city": "Austin", "state": "TX", "country": "US" }
+    },
+    "amount": 850.0,
+    "attachments": [],
+    "channel": "portal",
+    "status": "submitted",
+    "flags": [],
+    "createdAt": "2025-08-20T10:20:00Z",
+    "updatedAt": "2025-08-20T10:20:00Z"
+  },
+  {
+    "id": "CLM-1002",
+    "claimantId": "P-002",
+    "policyId": "POL-002",
+    "incident": {
+      "date": "2025-08-28",
+      "type": "HomeTheft",
+      "description": "Reported theft of electronics. Police report filed.",
+      "location": { "city": "Seattle", "state": "WA", "country": "US" }
+    },
+    "amount": 4200.0,
+    "attachments": ["police-report-1002.pdf"],
+    "channel": "portal",
+    "status": "submitted",
+    "flags": [],
+    "createdAt": "2025-08-28T18:45:00Z",
+    "updatedAt": "2025-08-28T18:45:00Z"
+  },
+  {
+    "id": "CLM-1003",
+    "claimantId": "P-003",
+    "policyId": "POL-003",
+    "incident": {
+      "date": "2025-09-04",
+      "type": "AutoInjury",
+      "description": "Whiplash after minor fender bender. ER visit same day.",
+      "location": { "city": "Miami", "state": "FL", "country": "US" }
+    },
+    "amount": 9800.0,
+    "attachments": ["er-bill-2331.pdf"],
+    "channel": "paper",
+    "status": "submitted",
+    "flags": [],
+    "createdAt": "2025-09-05T12:00:00Z",
+    "updatedAt": "2025-09-05T12:00:00Z"
+  },
+  {
+    "id": "CLM-1004",
+    "claimantId": "P-002",
+    "policyId": "POL-002",
+    "incident": {
+      "date": "2025-09-10",
+      "type": "HomeWaterDamage",
+      "description": "Pipe burst in kitchen leading to floor damage.",
+      "location": { "city": "Seattle", "state": "WA", "country": "US" }
+    },
+    "amount": 1200.0,
+    "attachments": [],
+    "channel": "portal",
+    "status": "submitted",
+    "flags": [],
+    "createdAt": "2025-09-10T07:30:00Z",
+    "updatedAt": "2025-09-10T07:30:00Z"
+  },
+  {
+    "id": "CLM-1005",
+    "claimantId": "P-004",
+    "policyId": "POL-004",
+    "incident": {
+      "date": "2025-09-15",
+      "type": "AutoCollision",
+      "description": "Severe collision reported with high repair estimate.",
+      "location": { "city": "Newark", "state": "NJ", "country": "US" }
+    },
+    "amount": 21500.0,
+    "attachments": ["bodyshop-estimate-932.pdf"],
+    "channel": "paper",
+    "status": "submitted",
+    "flags": [],
+    "createdAt": "2025-09-16T09:10:00Z",
+    "updatedAt": "2025-09-16T09:10:00Z"
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "POL-001",
+    "personId": "P-001",
+    "policyNumber": "TX-AUTO-2024-0001",
+    "product": "Auto",
+    "deductible": 500,
+    "coverageLimit": 15000,
+    "active": true,
+    "startDate": "2024-01-01",
+    "endDate": "2025-12-31"
+  },
+  {
+    "id": "POL-002",
+    "personId": "P-002",
+    "policyNumber": "WA-HOME-2023-0099",
+    "product": "Home",
+    "deductible": 1000,
+    "coverageLimit": 30000,
+    "active": true,
+    "startDate": "2023-03-01",
+    "endDate": "2026-03-01"
+  },
+  {
+    "id": "POL-003",
+    "personId": "P-003",
+    "policyNumber": "FL-AUTO-2025-1203",
+    "product": "Auto",
+    "deductible": 750,
+    "coverageLimit": 25000,
+    "active": true,
+    "startDate": "2025-01-01",
+    "endDate": "2026-01-01"
+  },
+  {
+    "id": "POL-004",
+    "personId": "P-004",
+    "policyNumber": "NJ-AUTO-2024-0456",
+    "product": "Auto",
+    "deductible": 1000,
+    "coverageLimit": 50000,
+    "active": true,
+    "startDate": "2024-06-01",
+    "endDate": "2026-06-01"
+  }
+]

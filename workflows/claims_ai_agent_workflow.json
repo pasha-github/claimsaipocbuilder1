@@ -1,0 +1,66 @@
+{
+  "name": "Claims AI Agent Orchestration",
+  "nodes": [
+    {
+      "parameters": {"path": "claims/submit", "options": {}},
+      "id": "webhook-portal",
+      "name": "Portal Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 200]
+    },
+    {
+      "parameters": {"command": "node src/agent/run.js"},
+      "id": "exec-process",
+      "name": "Process Claims",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [600, 200]
+    },
+    {
+      "parameters": {"cronExpression": "*/5 * * * *"},
+      "id": "cron-poll",
+      "name": "Poll Inbox",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {"command": "node src/agent/watch.js"},
+      "id": "exec-watch",
+      "name": "Start Watcher",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [600, 400]
+    },
+    {
+      "parameters": {"httpMethod": "POST", "url": "={{$json[\"SLACK_WEBHOOK_URL\"]}}", "jsonParameters": true, "options": {}},
+      "id": "slack",
+      "name": "Slack Notify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {"httpMethod": "POST", "url": "={{$json[\"TEAMS_WEBHOOK_URL\"]}}", "jsonParameters": true},
+      "id": "teams",
+      "name": "Teams Notify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1000, 320]
+    },
+    {
+      "parameters": {"fromEmail": "={{$json[\"FROM_EMAIL\"]}}", "toEmail": "={{$json[\"TO_EMAIL\"]}}", "subject": "Claim Update", "text": "Processed"},
+      "id": "email",
+      "name": "Email Notify",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1000, 440]
+    }
+  ],
+  "connections": {
+    "Portal Webhook": {"main": [[{"node": "Process Claims", "type": "main", "index": 0}]]},
+    "Poll Inbox": {"main": [[{"node": "Start Watcher", "type": "main", "index": 0}]]},
+    "Process Claims": {"main": [[{"node": "Slack Notify", "type": "main", "index": 0}, {"node": "Teams Notify", "type": "main", "index": 0}, {"node": "Email Notify", "type": "main", "index": 0}]]}
+  }
+}

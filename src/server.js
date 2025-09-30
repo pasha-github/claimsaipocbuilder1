@@ -2,8 +2,10 @@ import http from 'http';
 import { promises as fs } from 'fs';
 import path from 'path';
 import url from 'url';
+import Busboy from 'busboy';
 import { readJson, appendToArray } from './db/fileDb.js';
 import { processClaim } from './agent/processClaim.js';
+import { connectors, readCreds, writeCreds, getConnector, isConnected, listFiles, saveUpload } from './connectors/index.js';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const ROOT = path.join(process.cwd());
@@ -38,9 +40,27 @@ const parseBody = async (req) => new Promise((resolve, reject) => {
   });
 });
 
+const parseUploads = (req) => new Promise((resolve, reject) => {
+  try {
+    const bb = Busboy({ headers: req.headers });
+    const files = [];
+    bb.on('file', (name, file, info) => {
+      const chunks = [];
+      file.on('data', (d) => chunks.push(d));
+      file.on('end', () => {
+        files.push({ fieldname: name, filename: info.filename, buffer: Buffer.concat(chunks) });
+      });
+    });
+    bb.on('error', reject);
+    bb.on('finish', () => resolve(files));
+    req.pipe(bb);
+  } catch (e) { reject(e); }
+});
+
 const server = http.createServer(async (req, res) => {
   const { pathname } = new url.URL(req.url, 'http://localhost');
 
+  // Claims APIs
   if (pathname === '/api/claims' && req.method === 'GET') {
     const claims = await readJson(CLAIMS_PATH, []);
     return send(res, 200, claims);
@@ -82,6 +102,56 @@ const server = http.createServer(async (req, res) => {
       return acc;
     }, { count: 0, amount: 0, payout: 0 });
     return send(res, 200, totals);
+  }
+
+  // Connectors APIs
+  if (pathname === '/api/connectors' && req.method === 'GET') {
+    const creds = await readCreds();
+    const list = connectors.map((c) => ({ id: c.id, name: c.name, type: c.type, requiredFields: c.requiredFields, connected: isConnected(c.id, creds) }));
+    return send(res, 200, list);
+  }
+
+  if (pathname.startsWith('/api/connectors/') && pathname.endsWith('/credentials') && req.method === 'POST') {
+    const id = pathname.split('/')[3];
+    const cfg = getConnector(id);
+    if (!cfg) return send(res, 404, { error: 'Unknown connector' });
+    const body = await parseBody(req);
+    const creds = await readCreds();
+    creds[id] = body || {};
+    await writeCreds(creds);
+    const connected = isConnected(id, creds);
+    return send(res, 200, { connected });
+  }
+
+  if (pathname.startsWith('/api/connectors/') && pathname.endsWith('/files') && req.method === 'GET') {
+    const id = pathname.split('/')[3];
+    const cfg = getConnector(id);
+    if (!cfg) return send(res, 404, { error: 'Unknown connector' });
+    const creds = await readCreds();
+    if (cfg.type !== 'storage') return send(res, 200, []);
+    if (!isConnected(id, creds)) return send(res, 401, { error: 'Not connected' });
+    const files = await listFiles(id);
+    return send(res, 200, files);
+  }
+
+  if (pathname.startsWith('/api/connectors/') && pathname.endsWith('/upload') && req.method === 'POST') {
+    const id = pathname.split('/')[3];
+    const cfg = getConnector(id);
+    if (!cfg) return send(res, 404, { error: 'Unknown connector' });
+    const creds = await readCreds();
+    if (cfg.type !== 'storage') return send(res, 400, { error: 'Uploads not supported' });
+    if (!isConnected(id, creds)) return send(res, 401, { error: 'Not connected' });
+    try {
+      const files = await parseUploads(req);
+      const saved = [];
+      for (const f of files) {
+        const s = await saveUpload(id, f.filename, f.buffer);
+        saved.push(s);
+      }
+      return send(res, 200, saved);
+    } catch (e) {
+      return send(res, 400, { error: 'Upload failed' });
+    }
   }
 
   return serveStatic(req, res, pathname);

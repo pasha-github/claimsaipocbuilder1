@@ -9,21 +9,217 @@
 <body>
   <header class="header-bar"><div class="brand">URCovered</div><nav class="nav-links"><a href="/web/pages/submit.html">New Claim</a><a href="/web/pages/claims.html">Claims</a><a href="/web/pages/queue.html">Queue</a><a class="active" href="/web/pages/dashboard.html">Dashboard</a><a href="/web/pages/admin.html">Admin</a></nav></header>
   <main class="main-content">
-    <section class="card">
-      <div id="stats"></div>
+    <section class="card dashboard-summary">
+      <h1 class="section-heading">Portfolio Snapshot</h1>
+      <div class="metrics-grid" id="metrics-grid"></div>
+    </section>
+
+    <section class="card dashboard-distribution">
+      <div class="section-header">
+        <h2 class="section-heading">Claim Status Mix</h2>
+        <p class="section-subheading">Live distribution of active claims across the processing pipeline.</p>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="status-chart" aria-label="Claim status distribution" role="img"></canvas>
+      </div>
+    </section>
+
+    <section class="card dashboard-comparison">
+      <div class="section-header">
+        <h2 class="section-heading">Claim vs. Payout Exposure</h2>
+        <p class="section-subheading">Track outstanding exposure against paid settlements.</p>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="payout-chart" aria-label="Claim and payout comparison" role="img"></canvas>
+      </div>
+    </section>
+
+    <section class="card dashboard-trend">
+      <div class="section-header">
+        <h2 class="section-heading">Monthly Intake Trend</h2>
+        <p class="section-subheading">Incoming claim counts and total amounts over the past six months.</p>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="trend-chart" aria-label="Monthly claim trend" role="img"></canvas>
+      </div>
     </section>
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" integrity="sha384-wNN0qhVz6dnuZtHSNlBRcnQVwx9UvaGa0E0Fzrm7P/dPACeC2PIABtvl8CwfrTyR" crossorigin="anonymous"></script>
   <script>
-    const fmt = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n || 0);
-    fetch('/api/stats').then(r => r.json()).then((totals) => {
-      const el = document.getElementById('stats');
-      el.innerHTML = `
-        <p><strong>Total Claims:</strong> ${totals.count}</p>
-        <p><strong>Submitted:</strong> ${totals.submitted || 0} · <strong>Processing:</strong> ${totals.processing || 0} · <strong>Settled:</strong> ${totals.settled || 0} · <strong>Rejected:</strong> ${totals.rejected || 0}</p>
-        <p><strong>Total Claimed Amount:</strong> ${fmt(totals.amount)}</p>
-        <p><strong>Total Payout:</strong> ${fmt(totals.payout)}</p>
-      `;
-    });
+    const formatCurrency = (value) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(value || 0);
+
+    const buildMetrics = (totals) => {
+      const metrics = [
+        { id: 'total-claims', label: 'Total Claims', value: totals.count, accent: '#0b5fff' },
+        { id: 'submitted-claims', label: 'Submitted', value: totals.submitted || 0, accent: '#f59f00' },
+        { id: 'processing-claims', label: 'Processing', value: totals.processing || 0, accent: '#228be6' },
+        { id: 'settled-claims', label: 'Settled', value: totals.settled || 0, accent: '#2f9e44' },
+        { id: 'rejected-claims', label: 'Rejected', value: totals.rejected || 0, accent: '#d9480f' },
+        { id: 'total-amount', label: 'Total Claimed', value: formatCurrency(totals.amount), accent: '#5f3dc4' },
+        { id: 'total-payout', label: 'Total Payout', value: formatCurrency(totals.payout), accent: '#0ca678' }
+      ];
+
+      const container = document.getElementById('metrics-grid');
+      container.innerHTML = metrics.map((metric) => `
+        <article class="metric-card" data-metric="${metric.id}">
+          <span class="metric-label">${metric.label}</span>
+          <span class="metric-value" style="color:${metric.accent};">${metric.value}</span>
+        </article>
+      `).join('');
+    };
+
+    const createStatusChart = (totals) => {
+      const ctx = document.getElementById('status-chart');
+      return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Submitted', 'Processing', 'Settled', 'Rejected'],
+          datasets: [{
+            data: [totals.submitted || 0, totals.processing || 0, totals.settled || 0, totals.rejected || 0],
+            backgroundColor: ['#f59f00', '#228be6', '#2f9e44', '#d9480f'],
+            borderColor: '#fff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom' }
+          },
+          cutout: '60%'
+        }
+      });
+    };
+
+    const createPayoutChart = (totals) => {
+      const ctx = document.getElementById('payout-chart');
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Exposure'],
+          datasets: [
+            {
+              label: 'Claimed',
+              data: [totals.amount || 0],
+              backgroundColor: '#0b5fff'
+            },
+            {
+              label: 'Paid Out',
+              data: [totals.payout || 0],
+              backgroundColor: '#0ca678'
+            }
+          ]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: (value) => formatCurrency(value)
+              }
+            }
+          }
+        }
+      });
+    };
+
+    const createTrendChart = (claims) => {
+      const counts = new Map();
+      const amounts = new Map();
+
+      claims.forEach((claim) => {
+        const timestamp = claim.createdAt || claim.updatedAt;
+        if (!timestamp) return;
+        const eventDate = new Date(timestamp);
+        if (Number.isNaN(eventDate.getTime())) return;
+        const key = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}`;
+        counts.set(key, (counts.get(key) || 0) + 1);
+        amounts.set(key, (amounts.get(key) || 0) + (claim.amount || 0));
+      });
+
+      const sortedKeys = Array.from(counts.keys()).sort().slice(-6);
+      const labels = sortedKeys.map((key) => {
+        const [year, month] = key.split('-');
+        return new Date(Number(year), Number(month) - 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+      });
+
+      const ctx = document.getElementById('trend-chart');
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Claim Count',
+              data: sortedKeys.map((key) => counts.get(key) || 0),
+              borderColor: '#0b5fff',
+              backgroundColor: 'rgba(11, 95, 255, 0.15)',
+              tension: 0.4,
+              yAxisID: 'y',
+              fill: true
+            },
+            {
+              label: 'Claim Amount',
+              data: sortedKeys.map((key) => amounts.get(key) || 0),
+              borderColor: '#2f9e44',
+              backgroundColor: 'rgba(47, 158, 68, 0.15)',
+              tension: 0.4,
+              yAxisID: 'y1',
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          stacked: false,
+          scales: {
+            y: {
+              type: 'linear',
+              position: 'left',
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              beginAtZero: true,
+              grid: { drawOnChartArea: false },
+              ticks: {
+                callback: (value) => formatCurrency(value)
+              }
+            }
+          }
+        }
+      });
+    };
+
+    const initializeDashboard = async () => {
+      try {
+        const [totalsResponse, claimsResponse] = await Promise.all([
+          fetch('/api/stats'),
+          fetch('/api/claims')
+        ]);
+        const totals = await totalsResponse.json();
+        const claims = await claimsResponse.json();
+
+        buildMetrics(totals);
+        createStatusChart(totals);
+        createPayoutChart(totals);
+        createTrendChart(claims);
+      } catch (error) {
+        console.error('Failed to load dashboard data', error);
+      }
+    };
+
+    initializeDashboard();
   </script>
 </body>
 </html>
